@@ -6,9 +6,9 @@ import akka.http.scaladsl.Http
 import akka.kafka.{ConsumerSettings, ProducerSettings}
 import akka.stream.{ActorMaterializer, Materializer}
 import com.typesafe.config.{Config, ConfigFactory}
-import io.sudostream.api_event_horizon.kafka.serialising.{GeneratedTestsEventDeserialiser, GeneratedTestsEventSerializer}
+import io.sudostream.api_event_horizon.kafka.serialising.GeneratedTestsEventDeserialiser
 import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.common.serialization.{ByteArrayDeserializer, ByteArraySerializer, StringDeserializer, StringSerializer}
+import org.apache.kafka.common.serialization.{ByteArrayDeserializer, ByteArraySerializer, StringSerializer}
 
 import scala.concurrent.ExecutionContextExecutor
 
