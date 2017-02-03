@@ -4,7 +4,7 @@ import akka.Done
 import akka.actor.ActorSystem
 import akka.event.LoggingAdapter
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import akka.http.scaladsl.model.{HttpMethods, HttpRequest, HttpResponse}
 import akka.kafka.ConsumerMessage.{Committable, CommittableMessage}
 import akka.kafka.ProducerMessage.Message
 import akka.kafka._
@@ -12,13 +12,11 @@ import akka.kafka.scaladsl.Consumer.Control
 import akka.kafka.scaladsl.{Consumer, Producer}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
-import io.sudostream.api_event_horizon.aeh_actor.business.HttpRunner
-import io.sudostream.api_event_horizon.messages.GeneratedTestsEvent
+import io.sudostream.api_event_horizon.messages.{GeneratedTestsEvent, HttpMethod}
 import org.apache.kafka.clients.producer.ProducerRecord
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
-import scala.util.{Failure, Success}
 
 trait ProcessApiDefinition {
 
@@ -54,21 +52,49 @@ trait ProcessApiDefinition {
               msg.committableOffset)
         }
 
-    source.via(flow).runWith(sink)
+    source
+      .via(flow)
+      .runWith(sink)
   }
 
   def runTestScript(testScript: GeneratedTestsEvent): String = {
-    val httpRunner = new HttpRunner
+    val fullResults = for {test <- testScript.generatedTests}
+      yield {
+        val uriUnderTest = "http://" + testScript.hostname + ":" + testScript.ports.head + "/" + test.uriPath
+        println("Testing Uri :  " + uriUnderTest)
+        runTest(TestToRun(uriUnderTest, test.method))
+      }
 
-    runTest(TestToRun("helloThere"))
+    val prettyResults = fullResults mkString "\n"
+    println("Tests Done:-\n" + prettyResults + "\n\n")
+    prettyResults
   }
 
   def runTest(testToRun: TestToRun): String = {
-    val responseFuture: Future[HttpResponse] = Http().singleRequest(HttpRequest(uri = "http://akka.io"))
-    val res = Await.result(responseFuture, 5 seconds)
-    res.toString()
+    try {
+      val responseFuture: Future[HttpResponse] = Http().singleRequest(
+        HttpRequest(
+          method = testToRun.actualMethod,
+          uri = testToRun.uriToTest)
+      )
+
+      // NOTE: We have to block here because the entire point is to run in sequence against the target
+      val res = Await.result(responseFuture, 5 seconds)
+
+      "SUCCESS: " + testToRun.actualMethod + " : " + testToRun.uriToTest + " :: " + res.toString()
+    } catch {
+      case ex: Exception => "FAILURE: " + testToRun.actualMethod + " : " + testToRun.uriToTest + " :: " + ex.getMessage
+    }
   }
 
-  case class TestToRun(testName: String)
+  case class TestToRun(uriToTest: String, internalMethod: io.sudostream.api_event_horizon.messages.HttpMethod) {
+    val actualMethod: akka.http.scaladsl.model.HttpMethod = internalMethod match {
+      case HttpMethod.GET => HttpMethods.GET
+      case HttpMethod.POST => HttpMethods.POST
+      case HttpMethod.PUT => HttpMethods.PUT
+      case HttpMethod.DELETE => HttpMethods.DELETE
+      case _ => HttpMethods.GET
+    }
+  }
 
 }
