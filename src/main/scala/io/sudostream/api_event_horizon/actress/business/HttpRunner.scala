@@ -1,4 +1,4 @@
-package io.sudostream.api_event_horizon.aeh_actor.business
+package io.sudostream.api_event_horizon.actress.business
 
 
 import akka.http.scaladsl.Http

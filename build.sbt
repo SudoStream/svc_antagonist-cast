@@ -2,7 +2,7 @@ enablePlugins(JavaAppPackaging)
 enablePlugins(UniversalPlugin)
 enablePlugins(DockerPlugin)
 
-name := "aeh-actor"
+name := "actress"
 organization := "io.sudostream.api-event-horizon"
 version := "1.0.0-1"
 scalaVersion := "2.11.8"

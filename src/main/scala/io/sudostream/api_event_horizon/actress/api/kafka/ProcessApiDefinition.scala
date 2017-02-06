@@ -1,4 +1,4 @@
-package io.sudostream.api_event_horizon.aeh_actor.api.kafka
+package io.sudostream.api_event_horizon.actress.api.kafka
 
 import akka.Done
 import akka.actor.ActorSystem

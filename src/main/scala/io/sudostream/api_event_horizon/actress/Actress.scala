@@ -1,4 +1,4 @@
-package io.sudostream.api_event_horizon.aeh_actor
+package io.sudostream.api_event_horizon.actress
 
 import akka.actor.ActorSystem
 import akka.event.{Logging, LoggingAdapter}
@@ -12,9 +12,9 @@ import org.apache.kafka.common.serialization.{ByteArrayDeserializer, ByteArraySe
 
 import scala.concurrent.ExecutionContextExecutor
 
-object AehActor extends App with Service
-  with io.sudostream.api_event_horizon.aeh_actor.api.http.ProcessApiDefinition
-  with io.sudostream.api_event_horizon.aeh_actor.api.kafka.ProcessApiDefinition {
+object Actress extends App with Service
+  with io.sudostream.api_event_horizon.actress.api.http.ProcessApiDefinition
+  with io.sudostream.api_event_horizon.actress.api.kafka.ProcessApiDefinition {
 
   override val config = ConfigFactory.load()
   override implicit val system = ActorSystem("scriptwriter-system", config)

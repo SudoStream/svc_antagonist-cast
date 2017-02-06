@@ -1,4 +1,4 @@
-package io.sudostream.api_event_horizon.aeh_actor.api.http
+package io.sudostream.api_event_horizon.actress.api.http
 
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives._
