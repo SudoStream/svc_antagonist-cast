@@ -42,13 +42,13 @@ trait ProcessApiDefinition {
       Flow[ConsumerMessage.CommittableMessage[Array[Byte], SpeculativeScreenplay]]
         .map {
           msg =>
-            val testScript = msg.record.value()
-            println("Test Script = " + testScript)
+            val speculativeScreenplay = msg.record.value()
+            println("SpeculativeScreenplay = " + speculativeScreenplay)
 
-            val testResults = runTestScript(testScript)
+            val protagonistAnswers = performTheScript(speculativeScreenplay)
 
             ProducerMessage.Message(
-              new ProducerRecord[Array[Byte], String]("test-results", testResults),
+              new ProducerRecord[Array[Byte], String]("protagonist-answers", protagonistAnswers),
               msg.committableOffset)
         }
 
@@ -57,12 +57,12 @@ trait ProcessApiDefinition {
       .runWith(sink)
   }
 
-  def runTestScript(testScript: SpeculativeScreenplay): String = {
-    val fullResults = for {test <- testScript.templateInterrogationOfAntagonist}
+  def performTheScript(speculativeScreenplay: SpeculativeScreenplay): String = {
+    val fullResults = for {httpQuestion <- speculativeScreenplay.theAntagonistInterrogation}
       yield {
-        val uriUnderTest = "http://" + testScript.hostname + ":" + testScript.ports.head + "/" + test.uriPath
+        val uriUnderTest = "http://" + speculativeScreenplay.hostname + ":" + speculativeScreenplay.ports.head + "/" + httpQuestion.uriPath
         println("Testing Uri :  " + uriUnderTest)
-        runTest(TestToRun(uriUnderTest, test.method))
+        runTest(HttpQuestionToAsk(uriUnderTest, httpQuestion.method))
       }
 
     val prettyResults = fullResults mkString "\n"
@@ -70,24 +70,24 @@ trait ProcessApiDefinition {
     prettyResults
   }
 
-  def runTest(testToRun: TestToRun): String = {
+  def runTest(httpQuestion: HttpQuestionToAsk): String = {
     try {
       val responseFuture: Future[HttpResponse] = Http().singleRequest(
         HttpRequest(
-          method = testToRun.actualMethod,
-          uri = testToRun.uriToTest)
+          method = httpQuestion.actualMethod,
+          uri = httpQuestion.uriToTest)
       )
 
       // NOTE: We have to block here because the entire point is to run in sequence against the target
       val res = Await.result(responseFuture, 5 seconds)
 
-      "SUCCESS: " + testToRun.actualMethod + " : " + testToRun.uriToTest + " :: " + res.toString()
+      "SUCCESS: " + httpQuestion.actualMethod + " : " + httpQuestion.uriToTest + " :: " + res.toString()
     } catch {
-      case ex: Exception => "FAILURE: " + testToRun.actualMethod + " : " + testToRun.uriToTest + " :: " + ex.getMessage
+      case ex: Exception => "FAILURE: " + httpQuestion.actualMethod + " : " + httpQuestion.uriToTest + " :: " + ex.getMessage
     }
   }
 
-  case class TestToRun(uriToTest: String, internalMethod: io.sudostream.api_event_horizon.messages.HttpMethod) {
+  case class HttpQuestionToAsk(uriToTest: String, internalMethod: io.sudostream.api_event_horizon.messages.HttpMethod) {
     val actualMethod: akka.http.scaladsl.model.HttpMethod = internalMethod match {
       case HttpMethod.GET => HttpMethods.GET
       case HttpMethod.POST => HttpMethods.POST

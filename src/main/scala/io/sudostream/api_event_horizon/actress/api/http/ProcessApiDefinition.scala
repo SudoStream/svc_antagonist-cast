@@ -19,7 +19,7 @@ trait ProcessApiDefinition extends Health
   implicit val materializer: Materializer
   implicit val timeout = Timeout(30.seconds)
 
-  val routes: Route = path("actress" / "testresults") {
+  val routes: Route = path("actress" / "protagonistanswers") {
     get {
       complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "<h1>No Results I am afraid</h1>"))
     }
