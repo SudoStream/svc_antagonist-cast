@@ -12,7 +12,7 @@ import akka.kafka.scaladsl.Consumer.Control
 import akka.kafka.scaladsl.{Consumer, Producer}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
-import io.sudostream.api_event_horizon.messages.{GeneratedTestsEvent, HttpMethod}
+import io.sudostream.api_event_horizon.messages.{SpeculativeScreenPlay, HttpMethod}
 import org.apache.kafka.clients.producer.ProducerRecord
 
 import scala.concurrent.duration._
@@ -27,19 +27,19 @@ trait ProcessApiDefinition {
 
   def kafkaConsumerBootServers: String
   def kafkaProducerBootServers: String
-  def consumerSettings: ConsumerSettings[Array[Byte], GeneratedTestsEvent]
+  def consumerSettings: ConsumerSettings[Array[Byte], SpeculativeScreenPlay]
   def producerSettings: ProducerSettings[Array[Byte], String]
   def logger: LoggingAdapter
 
   def publishStuffToKafka(): Future[Done] = {
-    val source: Source[CommittableMessage[Array[Byte], GeneratedTestsEvent], Control] =
-      Consumer.committableSource(consumerSettings, Subscriptions.topics("generated-test-script"))
+    val source: Source[CommittableMessage[Array[Byte], SpeculativeScreenPlay], Control] =
+      Consumer.committableSource(consumerSettings, Subscriptions.topics("speculative-screenplays"))
 
     val sink: Sink[Message[Array[Byte], String, Committable], Future[Done]] =
       Producer.commitableSink(producerSettings)
 
     val flow =
-      Flow[ConsumerMessage.CommittableMessage[Array[Byte], GeneratedTestsEvent]]
+      Flow[ConsumerMessage.CommittableMessage[Array[Byte], SpeculativeScreenPlay]]
         .map {
           msg =>
             val testScript = msg.record.value()
@@ -57,7 +57,7 @@ trait ProcessApiDefinition {
       .runWith(sink)
   }
 
-  def runTestScript(testScript: GeneratedTestsEvent): String = {
+  def runTestScript(testScript: SpeculativeScreenPlay): String = {
     val fullResults = for {test <- testScript.generatedTests}
       yield {
         val uriUnderTest = "http://" + testScript.hostname + ":" + testScript.ports.head + "/" + test.uriPath
