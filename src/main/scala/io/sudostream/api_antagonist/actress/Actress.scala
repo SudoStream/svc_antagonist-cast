@@ -1,4 +1,4 @@
-package io.sudostream.api_event_horizon.actress
+package io.sudostream.api_antagonist.actress
 
 import akka.actor.ActorSystem
 import akka.event.{Logging, LoggingAdapter}
@@ -6,15 +6,17 @@ import akka.http.scaladsl.Http
 import akka.kafka.{ConsumerSettings, ProducerSettings}
 import akka.stream.{ActorMaterializer, Materializer}
 import com.typesafe.config.{Config, ConfigFactory}
-import io.sudostream.api_event_horizon.kafka.serialising.SpeculativeScreenplayDeserialiser
+import io.sudostream.api_antagonist.actress.api.http.ProcessApiDefinition
+import io.sudostream.api_antagonist.actress.api.kafka
+import io.sudostream.api_antagonist.kafka.serialising.SpeculativeScreenplayDeserialiser
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, ByteArraySerializer, StringSerializer}
 
 import scala.concurrent.ExecutionContextExecutor
 
 object Actress extends App with Service
-  with io.sudostream.api_event_horizon.actress.api.http.ProcessApiDefinition
-  with io.sudostream.api_event_horizon.actress.api.kafka.ProcessApiDefinition {
+  with ProcessApiDefinition
+  with kafka.ProcessApiDefinition {
 
   override val config = ConfigFactory.load()
   override implicit val system = ActorSystem("scriptwriter-system", config)

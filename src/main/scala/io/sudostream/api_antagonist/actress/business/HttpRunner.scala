@@ -1,5 +1,4 @@
-package io.sudostream.api_event_horizon.actress.business
-
+package io.sudostream.api_antagonist.actress.business
 
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}

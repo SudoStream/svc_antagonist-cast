@@ -1,4 +1,4 @@
-package io.sudostream.api_event_horizon.actress.api.http
+package io.sudostream.api_antagonist.actress.api.http
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
@@ -11,7 +11,7 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 
 trait ProcessApiDefinition extends Health
-  with io.sudostream.api_event_horizon.actress.api.kafka.ProcessApiDefinition {
+  with io.sudostream.api_antagonist.actress.api.kafka.ProcessApiDefinition {
 
   implicit def executor: ExecutionContextExecutor
 

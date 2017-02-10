@@ -1,4 +1,4 @@
-package io.sudostream.api_event_horizon.actress.api.kafka
+package io.sudostream.api_antagonist.actress.api.kafka
 
 import akka.Done
 import akka.actor.ActorSystem
@@ -12,7 +12,7 @@ import akka.kafka.scaladsl.Consumer.Control
 import akka.kafka.scaladsl.{Consumer, Producer}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
-import io.sudostream.api_event_horizon.messages.{SpeculativeScreenplay, HttpMethod}
+import io.sudostream.api_antagonist.messages.{SpeculativeScreenplay, HttpMethod}
 import org.apache.kafka.clients.producer.ProducerRecord
 
 import scala.concurrent.duration._
@@ -87,7 +87,7 @@ trait ProcessApiDefinition {
     }
   }
 
-  case class HttpQuestionToAsk(uriToTest: String, internalMethod: io.sudostream.api_event_horizon.messages.HttpMethod) {
+  case class HttpQuestionToAsk(uriToTest: String, internalMethod: io.sudostream.api_antagonist.messages.HttpMethod) {
     val actualMethod: akka.http.scaladsl.model.HttpMethod = internalMethod match {
       case HttpMethod.GET => HttpMethods.GET
       case HttpMethod.POST => HttpMethods.POST
