@@ -12,7 +12,7 @@ import akka.kafka.scaladsl.Consumer.Control
 import akka.kafka.scaladsl.{Consumer, Producer}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
-import io.sudostream.api_event_horizon.messages.{SpeculativeScreenPlay, HttpMethod}
+import io.sudostream.api_event_horizon.messages.{SpeculativeScreenplay, HttpMethod}
 import org.apache.kafka.clients.producer.ProducerRecord
 
 import scala.concurrent.duration._
@@ -27,19 +27,19 @@ trait ProcessApiDefinition {
 
   def kafkaConsumerBootServers: String
   def kafkaProducerBootServers: String
-  def consumerSettings: ConsumerSettings[Array[Byte], SpeculativeScreenPlay]
+  def consumerSettings: ConsumerSettings[Array[Byte], SpeculativeScreenplay]
   def producerSettings: ProducerSettings[Array[Byte], String]
   def logger: LoggingAdapter
 
   def publishStuffToKafka(): Future[Done] = {
-    val source: Source[CommittableMessage[Array[Byte], SpeculativeScreenPlay], Control] =
+    val source: Source[CommittableMessage[Array[Byte], SpeculativeScreenplay], Control] =
       Consumer.committableSource(consumerSettings, Subscriptions.topics("speculative-screenplays"))
 
     val sink: Sink[Message[Array[Byte], String, Committable], Future[Done]] =
       Producer.commitableSink(producerSettings)
 
     val flow =
-      Flow[ConsumerMessage.CommittableMessage[Array[Byte], SpeculativeScreenPlay]]
+      Flow[ConsumerMessage.CommittableMessage[Array[Byte], SpeculativeScreenplay]]
         .map {
           msg =>
             val testScript = msg.record.value()
@@ -57,8 +57,8 @@ trait ProcessApiDefinition {
       .runWith(sink)
   }
 
-  def runTestScript(testScript: SpeculativeScreenPlay): String = {
-    val fullResults = for {test <- testScript.generatedTests}
+  def runTestScript(testScript: SpeculativeScreenplay): String = {
+    val fullResults = for {test <- testScript.templateInterrogationOfAntagonist}
       yield {
         val uriUnderTest = "http://" + testScript.hostname + ":" + testScript.ports.head + "/" + test.uriPath
         println("Testing Uri :  " + uriUnderTest)
