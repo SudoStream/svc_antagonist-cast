@@ -16,8 +16,7 @@ libraryDependencies ++= {
   val akkaHttpVersion = "2.4.11"
   val scalaTestV = "2.2.6"
   Seq(
-    "io.sudostream.api-antagonist" %% "messages" % "0.0.1-SNAPSHOT",
-    "io.sudostream.api-antagonist" %% "screenplay-guild" % "0.0.1-SNAPSHOT",
+    "io.sudostream.api-antagonist" %% "messages" % "0.0.1",
 
     "com.typesafe.akka" %% "akka-actor" % akkaV,
     "com.typesafe.akka" %% "akka-stream" % akkaV,
