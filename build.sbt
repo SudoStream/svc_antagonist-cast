@@ -2,9 +2,9 @@ enablePlugins(JavaAppPackaging)
 enablePlugins(UniversalPlugin)
 enablePlugins(DockerPlugin)
 
-name := "api-antagonist"
+name := "antagonist-cast"
 organization := "io.sudostream.api-antagonist"
-version := "1.0.0-1"
+version := "0.0.1"
 scalaVersion := "2.11.8"
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
