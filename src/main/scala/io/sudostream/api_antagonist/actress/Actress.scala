@@ -8,7 +8,8 @@ import akka.stream.{ActorMaterializer, Materializer}
 import com.typesafe.config.{Config, ConfigFactory}
 import io.sudostream.api_antagonist.actress.api.http.ProcessApiDefinition
 import io.sudostream.api_antagonist.actress.api.kafka
-import io.sudostream.api_antagonist.kafka.serialising.SpeculativeScreenplayDeserialiser
+import io.sudostream.api_antagonist.kafka.serialising.{FinalScriptDeserialiser, LiveActedLineSerializer, RollCreditsSerializer, SpeculativeScreenplayDeserialiser}
+import io.sudostream.api_antagonist.messages.{FinalScript, LiveActedLine, RollCredits}
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, ByteArraySerializer, StringSerializer}
 
@@ -27,15 +28,18 @@ object Actress extends App with Service
   override val kafkaConsumerBootServers = config.getString("akka.kafka.consumer.bootstrapservers")
   override val kafkaProducerBootServers = config.getString("akka.kafka.producer.bootstrapservers")
 
-  override val consumerSettings = ConsumerSettings(system, new ByteArrayDeserializer, new SpeculativeScreenplayDeserialiser)
+  override val consumerSettings = ConsumerSettings(system, new ByteArrayDeserializer, new FinalScriptDeserialiser)
     .withBootstrapServers(kafkaConsumerBootServers)
     .withGroupId("akka.kafka.consumer.groupid")
     .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest")
 
-  override val producerSettings = ProducerSettings(system, new ByteArraySerializer, new StringSerializer)
+  override val producerSettingsLiveActedLine = ProducerSettings(system, new ByteArraySerializer, new LiveActedLineSerializer)
     .withBootstrapServers(kafkaProducerBootServers)
 
-  publishStuffToKafka()
+  override val producerSettingsRollCredits = ProducerSettings(system, new ByteArraySerializer, new RollCreditsSerializer)
+    .withBootstrapServers(kafkaProducerBootServers)
+
+  setUpKafkaFlow()
 
   Http().bindAndHandle(routes, config.getString("http.interface"), config.getInt("http.port"))
 

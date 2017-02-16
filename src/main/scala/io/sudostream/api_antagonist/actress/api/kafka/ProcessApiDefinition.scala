@@ -1,6 +1,5 @@
 package io.sudostream.api_antagonist.actress.api.kafka
 
-import akka.Done
 import akka.actor.ActorSystem
 import akka.event.LoggingAdapter
 import akka.http.scaladsl.Http
@@ -10,9 +9,10 @@ import akka.kafka.ProducerMessage.Message
 import akka.kafka._
 import akka.kafka.scaladsl.Consumer.Control
 import akka.kafka.scaladsl.{Consumer, Producer}
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Flow, Sink, Source}
-import io.sudostream.api_antagonist.messages.{SpeculativeScreenplay, HttpMethod}
+import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, RunnableGraph, Sink, Source}
+import akka.stream.{ClosedShape, Materializer}
+import akka.{Done, NotUsed}
+import io.sudostream.api_antagonist.messages._
 import org.apache.kafka.clients.producer.ProducerRecord
 
 import scala.concurrent.duration._
@@ -27,51 +27,113 @@ trait ProcessApiDefinition {
 
   def kafkaConsumerBootServers: String
   def kafkaProducerBootServers: String
-  def consumerSettings: ConsumerSettings[Array[Byte], SpeculativeScreenplay]
-  def producerSettings: ProducerSettings[Array[Byte], String]
+  def consumerSettings: ConsumerSettings[Array[Byte], FinalScript]
+  def producerSettingsLiveActedLine: ProducerSettings[Array[Byte], LiveActedLine]
+  def producerSettingsRollCredits: ProducerSettings[Array[Byte], RollCredits]
+
+
   def logger: LoggingAdapter
 
-  def publishStuffToKafka(): Future[Done] = {
-    val source: Source[CommittableMessage[Array[Byte], SpeculativeScreenplay], Control] =
-      Consumer.committableSource(consumerSettings, Subscriptions.topics("speculative-screenplays"))
+  def setUpKafkaFlow(): NotUsed = {
 
-    val sink: Sink[Message[Array[Byte], String, Committable], Future[Done]] =
-      Producer.commitableSink(producerSettings)
+    val g = RunnableGraph.fromGraph(GraphDSL.create() { implicit builder =>
+      import akka.stream.scaladsl.GraphDSL.Implicits._
 
-    val flow =
-      Flow[ConsumerMessage.CommittableMessage[Array[Byte], SpeculativeScreenplay]]
-        .map {
-          msg =>
-            val speculativeScreenplay = msg.record.value()
-            println("SpeculativeScreenplay = " + speculativeScreenplay)
+      val source: Source[CommittableMessage[Array[Byte], FinalScript], Control] = definedSource
 
-            val protagonistAnswers = performTheScript(speculativeScreenplay)
+      val flowCreateRollCreditsProducer = defineCreateRollCreditsProducer
+      val flowExtractFinalScript = defineExtractFinalScriptFlow
+      val flowCreateHttpQuestions = defineCreatedHttpQuestionsFlow
+      val flowRunHttpRequest = defineRunHttpRequestFlow
 
-            ProducerMessage.Message(
-              new ProducerRecord[Array[Byte], String]("protagonist-answers", protagonistAnswers),
-              msg.committableOffset)
-        }
+      val broadcastInitialMessage = builder.add(Broadcast[CommittableMessage[Array[Byte], FinalScript]](2))
 
-    source
-      .via(flow)
-      .runWith(sink)
+      val sinkLiveActedLine = defineLiveActedLineSink
+      val sinkRollCredits: Sink[Message[Array[Byte], RollCredits, Committable], Future[Done]] = defineRollCreditsSink
+
+
+      source ~> broadcastInitialMessage ~> flowExtractFinalScript ~>
+        flowCreateHttpQuestions.mapConcat(httpQuestions => httpQuestions.toList) ~>
+        flowRunHttpRequest ~> sinkLiveActedLine
+
+      broadcastInitialMessage ~> flowCreateRollCreditsProducer ~> sinkRollCredits
+
+      ClosedShape
+
+    })
+
+
+    g.run()
+
   }
 
-  def performTheScript(speculativeScreenplay: SpeculativeScreenplay): String = {
-    val fullResults = for {httpQuestion <- speculativeScreenplay.theAntagonistInterrogation}
-      yield {
-        val uriUnderTest = "http://" + speculativeScreenplay.hostname + ":" + speculativeScreenplay.ports.head + "/" + httpQuestion.uriPath
-        println("Testing Uri :  " + uriUnderTest)
-        runTest(HttpQuestionToAsk(uriUnderTest, httpQuestion.method))
+  private def defineCreateRollCreditsProducer = {
+    Flow[CommittableMessage[Array[Byte], FinalScript]]
+      .map {
+        msg =>
+          val finalScript = msg.record.value()
+          val rollCredits =
+            RollCredits(
+              filmUuid = finalScript.filmUuid,
+              finalScriptUuid = finalScript.finalScriptUuid
+            )
+
+          ProducerMessage.Message(
+            new ProducerRecord[Array[Byte], RollCredits]("live-acted-line", rollCredits), msg.committableOffset)
+      }
+  }
+
+  private def defineRollCreditsSink = Producer.commitableSink(producerSettingsRollCredits)
+
+  private def defineLiveActedLineSink = Producer.plainSink(producerSettingsLiveActedLine)
+
+  private def defineRunHttpRequestFlow =
+    Flow[HttpQuestionToAsk]
+      .map {
+        httpQuestionToAsk =>
+          println("About to make http call ...")
+          val liveActedLine = runTest(httpQuestionToAsk)
+          println(s"Live acted line = ${liveActedLine.toString}")
+          new ProducerRecord[Array[Byte], LiveActedLine]("live-acted-line", liveActedLine)
       }
 
-    val prettyResults = fullResults mkString "\n"
-    println("Tests Done:-\n" + prettyResults + "\n\n")
-    prettyResults
+  private def defineCreatedHttpQuestionsFlow = {
+    Flow[FinalScript]
+      .map {
+        finalScript: FinalScript =>
+          println("Okay so we are going to extract some questions here for http")
+          extractHttpQuestions(finalScript)
+      }
   }
 
-  def runTest(httpQuestion: HttpQuestionToAsk): String = {
+  private def defineExtractFinalScriptFlow = {
+    Flow[CommittableMessage[Array[Byte], FinalScript]]
+      .map {
+        msg =>
+          val finalScript = msg.record.value()
+          println("Ho Ho Final Script = " + finalScript)
+          finalScript
+      }
+  }
+
+  private def definedSource = {
+    Consumer.committableSource(consumerSettings, Subscriptions.topics("final-script"))
+  }
+
+  def extractHttpQuestions(finalScript: FinalScript): Seq[HttpQuestionToAsk] =
+    for {httpQuestion <- finalScript.antagonistLines}
+      yield {
+        val uriUnderTest = httpQuestion.uriPath
+        HttpQuestionToAsk(uriUnderTest, httpQuestion.method)
+      }
+
+
+  def runTest(httpQuestion: HttpQuestionToAsk): LiveActedLine = {
     try {
+      println(s"Http TODO ... ${httpQuestion.toString}")
+
+      val timeStart = System.currentTimeMillis()
+
       val responseFuture: Future[HttpResponse] = Http().singleRequest(
         HttpRequest(
           method = httpQuestion.actualMethod,
@@ -79,11 +141,28 @@ trait ProcessApiDefinition {
       )
 
       // NOTE: We have to block here because the entire point is to run in sequence against the target
-      val res = Await.result(responseFuture, 5 seconds)
+      val res = Await.result(responseFuture, 300 seconds)
 
-      "SUCCESS: " + httpQuestion.actualMethod + " : " + httpQuestion.uriToTest + " :: " + res.toString()
+      val timeEnd = System.currentTimeMillis()
+
+      println("Http Done")
+
+      // TODO: Create proper values here!
+      LiveActedLine(
+        filmUuid = "filmUuid",
+        finalScriptUuid = "finalScriptUuid",
+        uriTested = httpQuestion.uriToTest,
+        responseCodeActual = res.status.intValue(),
+        responseBodyActual = "",
+        responseMilliseconds = timeEnd - timeStart,
+        responseCodeExpected = 200,
+        responseBodyExpected = "",
+        responseMillisecondsSla = 10000
+      )
     } catch {
       case ex: Exception => "FAILURE: " + httpQuestion.actualMethod + " : " + httpQuestion.uriToTest + " :: " + ex.getMessage
+        println(s"ERROR: $ex")
+        throw ex
     }
   }
 
