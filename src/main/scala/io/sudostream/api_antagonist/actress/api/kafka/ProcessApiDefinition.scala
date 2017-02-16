@@ -36,7 +36,7 @@ trait ProcessApiDefinition {
 
   def setUpKafkaFlow(): NotUsed = {
 
-    val g = RunnableGraph.fromGraph(GraphDSL.create() { implicit builder =>
+    val runnableGraph = RunnableGraph.fromGraph(GraphDSL.create() { implicit builder =>
       import akka.stream.scaladsl.GraphDSL.Implicits._
 
       val source: Source[CommittableMessage[Array[Byte], FinalScript], Control] = definedSource
@@ -63,7 +63,7 @@ trait ProcessApiDefinition {
     })
 
 
-    g.run()
+    runnableGraph.run()
 
   }
 
