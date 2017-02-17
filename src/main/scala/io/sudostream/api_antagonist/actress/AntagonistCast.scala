@@ -8,14 +8,14 @@ import akka.stream.{ActorMaterializer, Materializer}
 import com.typesafe.config.{Config, ConfigFactory}
 import io.sudostream.api_antagonist.actress.api.http.ProcessApiDefinition
 import io.sudostream.api_antagonist.actress.api.kafka
-import io.sudostream.api_antagonist.kafka.serialising.{FinalScriptDeserialiser, LiveActedLineSerializer, RollCreditsSerializer, SpeculativeScreenplayDeserialiser}
-import io.sudostream.api_antagonist.messages.{FinalScript, LiveActedLine, RollCredits}
+import io.sudostream.api_antagonist.kafka.serialising.{FinalScriptDeserialiser, LiveActedLineSerializer, RollCreditsSerializer}
 import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.common.serialization.{ByteArrayDeserializer, ByteArraySerializer, StringSerializer}
+import org.apache.kafka.clients.producer.ProducerConfig
+import org.apache.kafka.common.serialization.{ByteArrayDeserializer, ByteArraySerializer}
 
 import scala.concurrent.ExecutionContextExecutor
 
-object Actress extends App with Service
+object AntagonistCast extends App with Service
   with ProcessApiDefinition
   with kafka.ProcessApiDefinition {
 
@@ -30,11 +30,12 @@ object Actress extends App with Service
 
   override val consumerSettings = ConsumerSettings(system, new ByteArrayDeserializer, new FinalScriptDeserialiser)
     .withBootstrapServers(kafkaConsumerBootServers)
-    .withGroupId("akka.kafka.consumer.groupid")
+    .withGroupId(config.getString("akka.kafka.consumer.groupid"))
     .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest")
 
   override val producerSettingsLiveActedLine = ProducerSettings(system, new ByteArraySerializer, new LiveActedLineSerializer)
     .withBootstrapServers(kafkaProducerBootServers)
+
 
   override val producerSettingsRollCredits = ProducerSettings(system, new ByteArraySerializer, new RollCreditsSerializer)
     .withBootstrapServers(kafkaProducerBootServers)
