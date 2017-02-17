@@ -50,7 +50,7 @@ trait ProcessApiDefinition extends ProcessApiStreamingComponents {
       // GRAPH
       source ~> broadcastInitialMessage ~> flowExtractFinalScript ~>
         flowCreateHttpQuestions.mapConcat(httpQuestions => httpQuestions.toList) ~>
-        flowRunHttpRequest ~> broadcastLiveActedLine ~> defineCreateKafkaRecordFlow ~> sinkLiveActedLine
+        flowRunHttpRequest ~> broadcastLiveActedLine ~> defineCreateKafkaRecordFlow ~> echo ~> sinkLiveActedLine
 
       broadcastLiveActedLine
         .filter(liveActedLine => liveActedLine.allLinesCompleted) ~> zip.in1

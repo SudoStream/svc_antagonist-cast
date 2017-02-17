@@ -52,6 +52,16 @@ trait ProcessApiStreamingComponents {
           new ProducerRecord[Array[Byte], LiveActedLine]("live-acted-line", liveActedLine)
       }
 
+  private[kafka] def echo =
+    Flow[ProducerRecord[Array[Byte], LiveActedLine]]
+      .map {
+        msgToCommit =>
+
+          println(s"Msg: ${msgToCommit}")
+
+          msgToCommit
+      }
+
   private[kafka] def defineCreatedHttpQuestionsFlow = {
     Flow[FinalScript]
       .map {

@@ -10,7 +10,6 @@ import io.sudostream.api_antagonist.actress.api.http.ProcessApiDefinition
 import io.sudostream.api_antagonist.actress.api.kafka
 import io.sudostream.api_antagonist.kafka.serialising.{FinalScriptDeserialiser, LiveActedLineSerializer, RollCreditsSerializer}
 import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, ByteArraySerializer}
 
 import scala.concurrent.ExecutionContextExecutor
@@ -35,7 +34,6 @@ object AntagonistCast extends App with Service
 
   override val producerSettingsLiveActedLine = ProducerSettings(system, new ByteArraySerializer, new LiveActedLineSerializer)
     .withBootstrapServers(kafkaProducerBootServers)
-
 
   override val producerSettingsRollCredits = ProducerSettings(system, new ByteArraySerializer, new RollCreditsSerializer)
     .withBootstrapServers(kafkaProducerBootServers)
